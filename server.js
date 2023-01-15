@@ -8,7 +8,30 @@ const apiRoutes         = require('./routes/api.js');
 const fccTestingRoutes  = require('./routes/fcctesting.js');
 const runner            = require('./test-runner');
 
+const chai = require('chai')
+const chaiHttp = require('chai-http');
+chai.use(chaiHttp);
+
 const app = express();
+const helmet = require('helmet')
+const mongoose = require("mongoose");
+app.use(helmet({
+  frameguard: {         // configure
+    action: 'deny'
+  },
+  contentSecurityPolicy: {    // enable and configure
+    directives: {
+      defaultSrc: ["'self'"],
+      styleSrc: ["'self'", 'style.com'],
+      scriptSrc: ["'self'", 'trusted-cdn.com']
+    }
+  },
+  dnsPrefetchControl: false,     // disable
+  nocache: true
+}))
+
+
+const Stock = require('./models/stock')
 
 app.use('/public', express.static(process.cwd() + '/public'));
 
@@ -40,6 +63,14 @@ app.use(function(req, res, next) {
 const listener = app.listen(process.env.PORT || 3000, function () {
   console.log('Your app is listening on port ' + listener.address().port);
   if(process.env.NODE_ENV==='test') {
+    mongoose.connect(process.env.TESTDB)
+    .then(()=>{
+      console.log('Connected to database');
+    })
+    .catch((err)=>{
+      console.log('Connection failed');
+      console.log(err)
+    });
     console.log('Running Tests...');
     setTimeout(function () {
       try {
@@ -49,6 +80,15 @@ const listener = app.listen(process.env.PORT || 3000, function () {
         console.error(e);
       }
     }, 3500);
+  }else{
+    mongoose.connect(process.env.DB)
+    .then(()=>{
+      console.log('Connected to database');
+    })
+    .catch((err)=>{
+      console.log('Connection failed');
+      console.log(err)
+    });
   }
 });
 
